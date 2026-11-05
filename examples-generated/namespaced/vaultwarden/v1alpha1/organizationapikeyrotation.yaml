@@ -1,0 +1,31 @@
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationAPIKeyRotation
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/organizationapikeyrotation
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    triggers:
+      rotation: ${time_rotating.example.id}
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationapikeyrotation
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Example Organization

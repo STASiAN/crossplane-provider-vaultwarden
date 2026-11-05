@@ -1,0 +1,608 @@
+name: ottramst/vaultwarden
+resources:
+    vaultwarden_account_register:
+        subCategory: ""
+        description: This resource registers a new account on the Vaultwarden server. password is saved in plain text to the state. With Terraform 1.11 and later, use the write-only password_wo with password_wo_version instead, which are never stored. Requires admin_token to be set in the provider configuration.
+        name: vaultwarden_account_register
+        title: vaultwarden_account_register Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "email": "foo@example.com",
+                  "name": "Example User",
+                  "password_wo": "${var.account_password}",
+                  "password_wo_version": 1
+                }
+              references:
+                password_wo: var.account_password
+              dependencies:
+                random_password.legacy: |-
+                    {
+                      "length": 32
+                    }
+            - name: legacy
+              manifest: |-
+                {
+                  "email": "bar@example.com",
+                  "name": "Legacy User",
+                  "password": "${random_password.legacy.result}"
+                }
+              references:
+                password: random_password.legacy.result
+              dependencies:
+                random_password.legacy: |-
+                    {
+                      "length": 32
+                    }
+        argumentDocs:
+            email: (String) The email of the account to register. Changing it deletes the account, including its vault, and registers a new one.
+            id: (String) ID of the registered account
+            name: (String) The name of the account to register. Changing it deletes the account, including its vault, and registers a new one.
+            password: '(String, Sensitive) The password of the account to register. It is stored in plain text in the state: with Terraform 1.11 and later, use password_wo instead. Exactly one of password and password_wo must be set. Changing it deletes the account, including its vault, and registers a new one. The password cannot be read back, so it is not set after an import; setting it then only updates the state. Moving the same password to password_wo does not replace the account.'
+            password_wo: '(String, Sensitive, Write-only) The password of the account to register, as a write-only attribute that is never stored in the plan or state. Requires Terraform 1.11 or later. Exactly one of password and password_wo must be set. Terraform cannot detect changes of a write-only value: change password_wo_version to register the account again with a new password.'
+            password_wo_version: (Number) Version of password_wo. Changing it deletes the account, including its vault, and registers a new one with the current password_wo. Setting it for the first time, for example after an import or when moving from password to password_wo, only updates the state.
+        importStatements:
+            - terraform import vaultwarden_account_register.example <id>
+    vaultwarden_folder:
+        subCategory: ""
+        description: This resource creates a folder in the personal vault of the provider user. The folder name is encrypted with the user's key. Deleting a folder keeps the items in it and moves them out of the folder. Requires email and master_password to be set in the provider configuration.
+        name: vaultwarden_folder
+        title: vaultwarden_folder Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "Infrastructure"
+                }
+            - name: nested
+              manifest: |-
+                {
+                  "name": "Infrastructure/Databases"
+                }
+        argumentDocs:
+            id: (String) ID of the folder
+            name: (String) The name of the folder. Bitwarden clients show a name with slashes, such as Parent/Child, as a nested folder
+        importStatements:
+            - terraform import vaultwarden_folder.example <folder_id>
+    vaultwarden_item_attachment:
+        subCategory: ""
+        description: 'This resource attaches a file to an item, in the personal vault of the provider user or in an organization. The file is encrypted like Bitwarden clients do: with its own attachment key, which is encrypted with the key of the item. Attachments cannot be changed: a different content or file name replaces the attachment. Changes to the content are detected with its SHA-256 hash (content_sha256), so changing only the path of file keeps the attachment. Empty files are not supported. Use the vaultwarden_item_attachment ephemeral resource to read the content of an attachment. Vaultwarden limits the storage of attachments with USER_ATTACHMENT_LIMIT and ORG_ATTACHMENT_LIMIT, and accepts files up to 525 MB. Requires email and master_password to be set in the provider configuration.'
+        name: vaultwarden_item_attachment
+        title: vaultwarden_item_attachment Resource - vaultwarden
+        examples:
+            - name: certificate
+              manifest: |-
+                {
+                  "file": "${path.module}/certs/server.pem",
+                  "item_id": "${vaultwarden_item_secure_note.server.id}"
+                }
+              references:
+                item_id: vaultwarden_item_secure_note.server.id
+              dependencies:
+                vaultwarden_item_secure_note.server: |-
+                    {
+                      "name": "Web server"
+                    }
+            - name: config
+              manifest: |-
+                {
+                  "content": "${jsonencode({ listen = \":443\" })}",
+                  "file_name": "config.json",
+                  "item_id": "${vaultwarden_item_secure_note.server.id}"
+                }
+              references:
+                item_id: vaultwarden_item_secure_note.server.id
+              dependencies:
+                vaultwarden_item_secure_note.server: |-
+                    {
+                      "name": "Web server"
+                    }
+            - name: keystore
+              manifest: |-
+                {
+                  "content_base64": "${filebase64(\"${path.module}/certs/keystore.p12\")}",
+                  "file_name": "keystore.p12",
+                  "item_id": "${vaultwarden_item_secure_note.server.id}"
+                }
+              references:
+                item_id: vaultwarden_item_secure_note.server.id
+              dependencies:
+                vaultwarden_item_secure_note.server: |-
+                    {
+                      "name": "Web server"
+                    }
+        argumentDocs:
+            content: (String, Sensitive) Content of the attachment, as a UTF-8 string. Requires file_name
+            content_base64: (String, Sensitive) Content of the attachment, base64-encoded, for binary files. Requires file_name
+            content_sha256: (String) Hex-encoded SHA-256 hash of the content of the attachment
+            file: (String) Path of the file to attach. Exactly one of file, content and content_base64 must be set
+            file_name: (String) Name of the attachment. Defaults to the name of file. Changing it replaces the attachment
+            id: (String) ID of the attachment
+            item_id: (String) ID of the item to attach the file to. Changing it replaces the attachment
+            size: (Number) Size of the encrypted attachment in bytes
+            size_name: (String) Size of the encrypted attachment in a human-readable form, such as 1.2 KB
+        importStatements:
+            - |-
+              # The import ID is the item ID and the attachment ID, separated by a slash
+              terraform import vaultwarden_item_attachment.example <item_id>/<attachment_id>
+    vaultwarden_item_login:
+        subCategory: ""
+        description: 'This resource creates a login item, with a username, password, TOTP secret and URIs, in the personal vault of the provider user or in an organization. Items are encrypted client-side, like Bitwarden clients do: new items get their own item key (cipher key), which is encrypted with the key of the provider user or of the organization. Updates keep the parts of the item that the provider does not manage, such as the password history, passkeys and attachments. Deleting the item deletes it permanently, without moving it to the trash. An item moved to the trash outside Terraform is created again. The secrets of the item, such as notes, are saved in the Terraform state. Requires email and master_password to be set in the provider configuration.'
+        name: vaultwarden_item_login
+        title: vaultwarden_item_login Resource - vaultwarden
+        examples:
+            - name: database
+              manifest: |-
+                {
+                  "fields": [
+                    {
+                      "name": "Port",
+                      "value": "5432"
+                    },
+                    {
+                      "name": "Recovery code",
+                      "type": "hidden",
+                      "value": "${var.database_recovery_code}"
+                    }
+                  ],
+                  "folder_id": "${vaultwarden_folder.infrastructure.id}",
+                  "name": "Database",
+                  "notes": "Primary database",
+                  "password": "${var.database_password}",
+                  "totp": "${var.database_totp_secret}",
+                  "uris": [
+                    {
+                      "match": "host",
+                      "uri": "https://db.example.com"
+                    }
+                  ],
+                  "username": "admin"
+                }
+              references:
+                folder_id: vaultwarden_folder.infrastructure.id
+                password: var.database_password
+                totp: var.database_totp_secret
+              dependencies:
+                vaultwarden_folder.infrastructure: |-
+                    {
+                      "name": "Infrastructure"
+                    }
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+                vaultwarden_organization_collection.operations: |-
+                    {
+                      "name": "Operations",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+            - name: shared
+              manifest: |-
+                {
+                  "collection_ids": [
+                    "${vaultwarden_organization_collection.operations.id}"
+                  ],
+                  "name": "Monitoring",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "password": "${var.monitoring_password}",
+                  "username": "ops"
+                }
+              references:
+                collection_ids: vaultwarden_organization_collection.operations.id
+                organization_id: vaultwarden_organization.example.id
+                password: var.monitoring_password
+              dependencies:
+                vaultwarden_folder.infrastructure: |-
+                    {
+                      "name": "Infrastructure"
+                    }
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+                vaultwarden_organization_collection.operations: |-
+                    {
+                      "name": "Operations",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+        argumentDocs:
+            collection_ids: (Set of String) IDs of the organization collections the item is assigned to. Requires organization_id. Defaults to none, which only organization owners and admins can use; other members must assign the item to a collection they can edit
+            favorite: (Boolean) Whether the item is a favorite of the provider user. Defaults to false
+            fields: (Attributes List) The custom fields of the item. Defaults to none (see below for nested schema)
+            folder_id: '(String) ID of the provider user''s folder that the item is in. Folders are personal: the item is shown in the folder only for the provider user, also for organization items'
+            id: (String) ID of the item
+            linked_id: (Number) For a linked field, the ID of the item attribute it links to, such as 100 for the username or 101 for the password of a login
+            match: '(String) How Bitwarden clients match the URI for autofill: domain, host, starts_with, exact, regular_expression or never. null uses the client''s default'
+            name: (String) The name of the item
+            notes: (String, Sensitive) The notes of the item
+            organization_id: (String) ID of the organization that owns the item. Leave unset for an item in the personal vault of the provider user. Changing it replaces the item, because Bitwarden cannot move items out of an organization
+            password: (String, Sensitive) The password of the login. When it changes, the previous password is added to the item's password history, like Bitwarden clients do
+            reprompt: (Boolean) Whether Bitwarden clients ask for the master password before showing the item. Defaults to false
+            totp: (String, Sensitive) The TOTP secret or otpauth:// URI of the login
+            type: '(String) The type of the custom field: text, hidden, boolean or linked. Defaults to text'
+            uri: (String) The URI
+            uris: (Attributes List) The URIs of the login, for autofill. Defaults to none (see below for nested schema)
+            username: (String) The username of the login
+            value: (String, Sensitive) The value of the custom field. For a boolean field, true or false. Linked fields have no value
+        importStatements:
+            - terraform import vaultwarden_item_login.example <item_id>
+    vaultwarden_item_secure_note:
+        subCategory: ""
+        description: 'This resource creates a secure note item in the personal vault of the provider user or in an organization. The note''s text is the notes attribute. Items are encrypted client-side, like Bitwarden clients do: new items get their own item key (cipher key), which is encrypted with the key of the provider user or of the organization. Updates keep the parts of the item that the provider does not manage, such as the password history, passkeys and attachments. Deleting the item deletes it permanently, without moving it to the trash. An item moved to the trash outside Terraform is created again. The secrets of the item, such as notes, are saved in the Terraform state. Requires email and master_password to be set in the provider configuration.'
+        name: vaultwarden_item_secure_note
+        title: vaultwarden_item_secure_note Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "Recovery instructions",
+                  "notes": "1. Restore the latest backup.\n2. Rotate the credentials.\n"
+                }
+        argumentDocs:
+            collection_ids: (Set of String) IDs of the organization collections the item is assigned to. Requires organization_id. Defaults to none, which only organization owners and admins can use; other members must assign the item to a collection they can edit
+            favorite: (Boolean) Whether the item is a favorite of the provider user. Defaults to false
+            fields: (Attributes List) The custom fields of the item. Defaults to none (see below for nested schema)
+            folder_id: '(String) ID of the provider user''s folder that the item is in. Folders are personal: the item is shown in the folder only for the provider user, also for organization items'
+            id: (String) ID of the item
+            linked_id: (Number) For a linked field, the ID of the item attribute it links to, such as 100 for the username or 101 for the password of a login
+            name: (String) The name of the item
+            notes: (String, Sensitive) The notes of the item
+            organization_id: (String) ID of the organization that owns the item. Leave unset for an item in the personal vault of the provider user. Changing it replaces the item, because Bitwarden cannot move items out of an organization
+            reprompt: (Boolean) Whether Bitwarden clients ask for the master password before showing the item. Defaults to false
+            type: '(String) The type of the custom field: text, hidden, boolean or linked. Defaults to text'
+            value: (String, Sensitive) The value of the custom field. For a boolean field, true or false. Linked fields have no value
+        importStatements:
+            - terraform import vaultwarden_item_secure_note.example <item_id>
+    vaultwarden_organization:
+        subCategory: ""
+        description: This resource creates a Vaultwarden organization.
+        name: vaultwarden_organization
+        title: vaultwarden_organization Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "Example"
+                }
+        argumentDocs:
+            billing_email: (String) The billing email of the organization. If not specified, defaults to the authenticated user's email.
+            collection_name: (String) The name of the collection to create for the organization. Defaults to Default
+            id: (String) ID of the organization
+            name: (String) The name of the organization
+        importStatements:
+            - terraform import vaultwarden_organization.example <id>
+    vaultwarden_organization_api_key_rotation:
+        subCategory: ""
+        description: 'Rotates the API key of an organization: creating the resource, or replacing it when triggers change, gives the organization a new client secret and invalidates the old one. The secret is not stored: read it with the vaultwarden_organization_api_key ephemeral resource. Destroying the resource leaves the current key unchanged. Rotating requires the provider user''s master password and, on Vaultwarden 1.37 and later, the Owner role in the organization (1.36 also allows Admin).'
+        name: vaultwarden_organization_api_key_rotation
+        title: vaultwarden_organization_api_key_rotation Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "triggers": {
+                    "rotation": "${time_rotating.example.id}"
+                  }
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                time_rotating.example: |-
+                    {
+                      "rotation_days": 90
+                    }
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example Organization"
+                    }
+        argumentDocs:
+            id: (String) ID of the organization.
+            organization_id: (String) ID of the organization. Changing it rotates the key of the new organization.
+            revision_date: (String) When the API key was last rotated.
+            triggers: (Map of String) Arbitrary values that rotate the key again when they change, for example the id of a time_rotating resource.
+        importStatements: []
+    vaultwarden_organization_collection:
+        subCategory: ""
+        description: This resource creates a Vaultwarden organization collection.
+        name: vaultwarden_organization_collection
+        title: vaultwarden_organization_collection Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "Example Collection",
+                  "organization_id": "${vaultwarden_organization.example.id}"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+        argumentDocs:
+            external_id: (String) An optional identifier that can be assigned to the collection for integration with external systems. This identifier is not generated by Vaultwarden and must be provided explicitly. It is typically used to link the collection to external systems, such as directory services (e.g., LDAP, Active Directory) or custom automation workflows.
+            id: (String) ID of the organization collection
+            name: (String) The name of the organization collection
+            organization_id: (String) ID of the organization that the collection belongs to
+        importStatements:
+            - terraform import vaultwarden_organization_collection.example <org_id>/<id>
+    vaultwarden_organization_collection_group:
+        subCategory: ""
+        description: This resource gives a group access to a collection. Access of other users and groups to the collection is left unchanged. Groups require the ORG_GROUPS_ENABLED=true setting on the Vaultwarden server.
+        name: vaultwarden_organization_collection_group
+        title: vaultwarden_organization_collection_group Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "collection_id": "${vaultwarden_organization_collection.example.id}",
+                  "group_id": "${vaultwarden_organization_group.example.id}",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "read_only": true
+                }
+              references:
+                collection_id: vaultwarden_organization_collection.example.id
+                group_id: vaultwarden_organization_group.example.id
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+                vaultwarden_organization_collection.example: |-
+                    {
+                      "name": "Example Collection",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+                vaultwarden_organization_group.example: |-
+                    {
+                      "name": "Engineering",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+        argumentDocs:
+            collection_id: (String) ID of the collection
+            group_id: (String) ID of the group, for example vaultwarden_organization_group.example.id
+            hide_passwords: (Boolean) Whether passwords are hidden from the members of the group. Defaults to false
+            id: (String) ID of the collection access, in the format <organization_id>/<collection_id>/<group_id>
+            manage: (Boolean) Whether the members of the group can manage the collection, including its access. Vaultwarden reports a group that can edit the items and see their passwords as able to manage the collection, so manage = false is not reported as drift in that case. Defaults to false
+            organization_id: (String) ID of the organization
+            read_only: (Boolean) Whether the members of the group can only view the items in the collection. Defaults to false
+        importStatements:
+            - terraform import vaultwarden_organization_collection_group.example <org_id>/<collection_id>/<group_id>
+    vaultwarden_organization_collection_user:
+        subCategory: ""
+        description: This resource gives an organization user access to a collection. Access of other users and groups to the collection is left unchanged. Users with access to all collections (Owner, Admin, or a Manager with access_all) cannot be assigned to individual collections.
+        name: vaultwarden_organization_collection_user
+        title: vaultwarden_organization_collection_user Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "collection_id": "${vaultwarden_organization_collection.example.id}",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "organization_user_id": "${vaultwarden_organization_user.example.id}",
+                  "read_only": true
+                }
+              references:
+                collection_id: vaultwarden_organization_collection.example.id
+                organization_id: vaultwarden_organization.example.id
+                organization_user_id: vaultwarden_organization_user.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+                vaultwarden_organization_collection.example: |-
+                    {
+                      "name": "Example Collection",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+                vaultwarden_organization_user.example: |-
+                    {
+                      "email": "user@example.com",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+        argumentDocs:
+            collection_id: (String) ID of the collection
+            hide_passwords: (Boolean) Whether passwords are hidden from the user. Defaults to false
+            id: (String) ID of the collection access, in the format <organization_id>/<collection_id>/<organization_user_id>
+            manage: (Boolean) Whether the user can manage the collection, including its access. A Manager that can edit the collection and see its passwords can always manage it. Defaults to false
+            organization_id: (String) ID of the organization
+            organization_user_id: (String) ID of the organization user, for example vaultwarden_organization_user.example.id
+            read_only: (Boolean) Whether the user can only view the items in the collection. Defaults to false
+        importStatements:
+            - terraform import vaultwarden_organization_collection_user.example <org_id>/<collection_id>/<organization_user_id>
+    vaultwarden_organization_group:
+        subCategory: ""
+        description: This resource creates a group in a Vaultwarden organization. Groups require the ORG_GROUPS_ENABLED=true setting on the Vaultwarden server. Updates keep the group's members and collection access, including ones managed outside Terraform.
+        name: vaultwarden_organization_group
+        title: vaultwarden_organization_group Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "name": "Engineering",
+                  "organization_id": "${vaultwarden_organization.example.id}"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+        argumentDocs:
+            access_all: (Boolean) Whether the members of the group have access to all collections of the organization. Defaults to false. Vaultwarden 1.37 and later do not return this value, so changes made outside Terraform are not detected on those versions
+            external_id: (String) An identifier to link the group to an external system, such as a directory service. Vaultwarden cannot change the external ID of an existing group, so changing it replaces the group
+            id: (String) ID of the group
+            name: (String) The name of the group
+            organization_id: (String) ID of the organization that the group belongs to
+        importStatements:
+            - terraform import vaultwarden_organization_group.example <org_id>/<group_id>
+    vaultwarden_organization_group_member:
+        subCategory: ""
+        description: This resource adds an organization user to a group. Other members of the group and other groups of the user are left unchanged. Groups require the ORG_GROUPS_ENABLED=true setting on the Vaultwarden server.
+        name: vaultwarden_organization_group_member
+        title: vaultwarden_organization_group_member Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "group_id": "${vaultwarden_organization_group.example.id}",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "organization_user_id": "${vaultwarden_organization_user.example.id}"
+                }
+              references:
+                group_id: vaultwarden_organization_group.example.id
+                organization_id: vaultwarden_organization.example.id
+                organization_user_id: vaultwarden_organization_user.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+                vaultwarden_organization_group.example: |-
+                    {
+                      "name": "Engineering",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+                vaultwarden_organization_user.example: |-
+                    {
+                      "email": "user@example.com",
+                      "organization_id": "${vaultwarden_organization.example.id}"
+                    }
+        argumentDocs:
+            group_id: (String) ID of the group, for example vaultwarden_organization_group.example.id
+            id: (String) ID of the group membership, in the format <organization_id>/<group_id>/<organization_user_id>
+            organization_id: (String) ID of the organization
+            organization_user_id: (String) ID of the organization user, for example vaultwarden_organization_user.example.id
+        importStatements:
+            - terraform import vaultwarden_organization_group_member.example <org_id>/<group_id>/<organization_user_id>
+    vaultwarden_organization_policy:
+        subCategory: ""
+        description: 'This resource manages a policy of an organization. Policies cannot be deleted: destroying the resource disables the policy and clears its data. Enabling some policies changes the organization''s members: two_factor_authentication revokes members without two-step login, and single_org revokes members that belong to another organization. Owners and Admins are exempt.'
+        name: vaultwarden_organization_policy
+        title: vaultwarden_organization_policy Resource - vaultwarden
+        examples:
+            - name: master_password
+              manifest: |-
+                {
+                  "data": "${jsonencode({\n    minComplexity  = 3\n    minLength      = 14\n    requireUpper   = true\n    requireLower   = true\n    requireNumbers = true\n    requireSpecial = true\n  })}",
+                  "enabled": true,
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "type": "master_password"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+            - name: disable_send
+              manifest: |-
+                {
+                  "enabled": true,
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "type": "disable_send"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+        argumentDocs:
+            data: (String) The settings of the policy as a JSON object, for the policy types that have settings, for example jsonencode({ minLength = 12, requireUpper = true }) for master_password. The keys are the ones the Bitwarden clients use, such as minComplexity, minLength, requireUpper, requireLower, requireNumbers and requireSpecial for master_password, disableHideEmail for send_options, and autoEnrollEnabled for reset_password.
+            enabled: (Boolean) Whether the policy is enabled
+            id: (String) ID of the policy, in the format <organization_id>/<type>
+            organization_id: (String) ID of the organization
+            type: (String) The type of the policy. One of disable_send, master_password, organization_user_notification, password_generator, personal_ownership, remove_unlock_with_pin, reset_password, restricted_item_types, send_options, single_org, two_factor_authentication, uri_match_defaults. personal_ownership is the Remove individual vault policy, and reset_password the Account recovery administration policy. organization_user_notification requires Vaultwarden 1.37 or later.
+        importStatements:
+            - terraform import vaultwarden_organization_policy.example <org_id>/<type>
+    vaultwarden_organization_user:
+        subCategory: ""
+        description: This resource invites a user to an organization on the Vaultwarden server.
+        name: vaultwarden_organization_user
+        title: vaultwarden_organization_user Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "email": "foo@example.com",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "type": "User"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+            - name: confirmed
+              manifest: |-
+                {
+                  "auto_confirm": true,
+                  "email": "bar@example.com",
+                  "organization_id": "${vaultwarden_organization.example.id}"
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+            - name: revoked
+              manifest: |-
+                {
+                  "email": "baz@example.com",
+                  "organization_id": "${vaultwarden_organization.example.id}",
+                  "revoked": true
+                }
+              references:
+                organization_id: vaultwarden_organization.example.id
+              dependencies:
+                vaultwarden_organization.example: |-
+                    {
+                      "name": "Example"
+                    }
+        argumentDocs:
+            access_all: (Boolean) Whether the user has access to all collections in the organization. Owner and Admin users always have access to all collections. For Manager users it can be set to true (the Manage all collections permission). User users cannot have it; grant them access to individual collections instead. Defaults to true for Owner and Admin, and false otherwise.
+            auto_confirm: (Boolean) Whether to confirm the user once they have accepted the invitation. Until a user is confirmed, they cannot decrypt the organization's items. Confirming encrypts the organization key with the user's public key, which Vaultwarden only allows after the user accepted the invitation. When the user has accepted, the plan shows status as changing and the apply confirms them; while they are still Invited, nothing changes. Setting it to false does not unconfirm a confirmed user. Defaults to false.
+            email: (String) The email of the user to invite. Changing it removes the user from the organization and invites the new email.
+            id: (String) ID of the invited user
+            organization_id: (String) ID of the organization to invite the user to
+            revoked: (Boolean) Whether the user's access to the organization is revoked. A revoked user stays in the organization but cannot access its items; restoring them (false) brings back the status they had before. Defaults to false.
+            status: '(String) The status of the user: Invited, Accepted, Confirmed or Revoked'
+            type: (String) The role type of the user (Owner, Admin, User, Manager). Defaults to User
+        importStatements:
+            - terraform import vaultwarden_organization_user.example <org_id>/<id>
+    vaultwarden_user:
+        subCategory: ""
+        description: This resource invites a user to the Vaultwarden server. Requires admin_token to be set in the provider configuration.
+        name: vaultwarden_user
+        title: vaultwarden_user Resource - vaultwarden
+        examples:
+            - name: example
+              manifest: |-
+                {
+                  "email": "foo@example.com"
+                }
+            - name: disabled
+              manifest: |-
+                {
+                  "email": "bar@example.com",
+                  "enabled": false
+                }
+        argumentDocs:
+            email: (String) The email of the user to invite. Changing it deletes the user, including their vault if they accepted the invitation, and invites the new email.
+            enabled: (Boolean) Whether the user can log in. Disabling a user also logs them out of all their devices. Defaults to true.
+            id: (String) ID of the user
+        importStatements:
+            - terraform import vaultwarden_user.example <id>

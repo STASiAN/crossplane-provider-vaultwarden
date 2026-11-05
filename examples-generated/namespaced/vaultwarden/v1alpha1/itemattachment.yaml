@@ -1,0 +1,30 @@
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: ItemAttachment
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/itemattachment
+  labels:
+    testing.upbound.io/example-name: certificate
+  name: certificate
+  namespace: crossplane-system
+spec:
+  forProvider:
+    file: ${path.module}/certs/server.pem
+    itemIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: server
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: ItemSecureNote
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/itemattachment
+  labels:
+    testing.upbound.io/example-name: server
+  name: server
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Web server

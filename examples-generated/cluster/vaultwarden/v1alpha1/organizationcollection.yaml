@@ -1,0 +1,28 @@
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: OrganizationCollection
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/organizationcollection
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    name: Example Collection
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationcollection
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    name: Example

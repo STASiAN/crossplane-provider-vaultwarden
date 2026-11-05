@@ -1,0 +1,9 @@
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: Folder
+metadata:
+  name: infrastructure
+spec:
+  forProvider:
+    name: Infrastructure
+  providerConfigRef:
+    name: default

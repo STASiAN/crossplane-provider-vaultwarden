@@ -1,0 +1,15 @@
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: ItemSecureNote
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/itemsecurenote
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Recovery instructions
+    notesSecretRef:
+      key: example-key
+      name: example-secret

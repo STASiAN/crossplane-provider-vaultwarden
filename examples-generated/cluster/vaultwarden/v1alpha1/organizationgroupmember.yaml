@@ -1,0 +1,67 @@
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: OrganizationGroupMember
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/organizationgroupmember
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    groupIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    organizationUserIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationgroupmember
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    name: Example
+
+---
+
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: OrganizationGroup
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationgroupmember
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    name: Engineering
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: OrganizationUser
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationgroupmember
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+spec:
+  forProvider:
+    email: user@example.com
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example

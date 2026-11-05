@@ -1,0 +1,86 @@
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: ItemLogin
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/itemlogin
+  labels:
+    testing.upbound.io/example-name: database
+  name: database
+  namespace: crossplane-system
+spec:
+  forProvider:
+    fields:
+    - name: Port
+      valueSecretRef:
+        key: example-key
+        name: example-secret
+    - name: Recovery code
+      type: hidden
+      valueSecretRef:
+        key: example-key
+        name: example-secret
+    folderIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: infrastructure
+    name: Database
+    notesSecretRef:
+      key: example-key
+      name: example-secret
+    passwordSecretRef:
+      key: example-key
+      name: example-secret
+    totpSecretRef:
+      key: example-key
+      name: example-secret
+    uris:
+    - match: host
+      uri: https://db.example.com
+    username: admin
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: Folder
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/itemlogin
+  labels:
+    testing.upbound.io/example-name: infrastructure
+  name: infrastructure
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Infrastructure
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/itemlogin
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Example
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationCollection
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/itemlogin
+  labels:
+    testing.upbound.io/example-name: operations
+  name: operations
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Operations
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example

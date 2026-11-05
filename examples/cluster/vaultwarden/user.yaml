@@ -1,0 +1,11 @@
+# Invites a user through the /admin API; requires admin_token in the
+# ProviderConfig credentials.
+apiVersion: vaultwarden.crossplane.io/v1alpha1
+kind: User
+metadata:
+  name: john-doe
+spec:
+  forProvider:
+    email: john.doe@example.com
+  providerConfigRef:
+    name: default

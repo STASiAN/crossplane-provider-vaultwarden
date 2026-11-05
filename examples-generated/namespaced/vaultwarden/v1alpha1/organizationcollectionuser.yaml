@@ -1,0 +1,72 @@
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationCollectionUser
+metadata:
+  annotations:
+    meta.upbound.io/example-id: vaultwarden/v1alpha1/organizationcollectionuser
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    collectionIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    organizationUserIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+    readOnly: true
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationcollectionuser
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Example
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationCollection
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationcollectionuser
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    name: Example Collection
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example
+
+---
+
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationUser
+metadata:
+  annotations:
+    meta.upbound.io/example-id: /v1alpha1/organizationcollectionuser
+  labels:
+    testing.upbound.io/example-name: example
+  name: example
+  namespace: crossplane-system
+spec:
+  forProvider:
+    email: user@example.com
+    organizationIdSelector:
+      matchLabels:
+        testing.upbound.io/example-name: example

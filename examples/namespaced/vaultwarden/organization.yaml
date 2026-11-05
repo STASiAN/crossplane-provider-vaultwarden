@@ -1,0 +1,91 @@
+# An organization with a collection, a group with access to it, and a login
+# item stored in the collection. Requires email and master_password in the
+# provider credentials.
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: Organization
+metadata:
+  name: acme
+  namespace: default
+spec:
+  forProvider:
+    name: ACME
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationCollection
+metadata:
+  name: infra
+  namespace: default
+spec:
+  forProvider:
+    name: Infrastructure
+    organizationIdRef:
+      name: acme
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationGroup
+metadata:
+  name: engineering
+  namespace: default
+spec:
+  forProvider:
+    name: Engineering
+    organizationIdRef:
+      name: acme
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: OrganizationCollectionGroup
+metadata:
+  name: engineering-infra
+  namespace: default
+spec:
+  forProvider:
+    organizationIdRef:
+      name: acme
+    collectionIdRef:
+      name: infra
+    groupIdRef:
+      name: engineering
+    readOnly: true
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-password
+  namespace: default
+type: Opaque
+stringData:
+  password: change-me
+---
+apiVersion: vaultwarden.m.crossplane.io/v1alpha1
+kind: ItemLogin
+metadata:
+  name: db
+  namespace: default
+spec:
+  forProvider:
+    name: Production database
+    organizationIdRef:
+      name: acme
+    collectionIdsRefs:
+      - name: infra
+    username: app
+    passwordSecretRef:
+      name: db-password
+      key: password
+    uris:
+      - uri: postgres://db.example.com:5432
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
