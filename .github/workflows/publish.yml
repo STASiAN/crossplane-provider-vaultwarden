@@ -81,5 +81,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes \
-            --notes "Package: \`${UPBOUND_REGISTRY_ORG}/crossplane-provider-vaultwarden:${GITHUB_REF_NAME}\`"
+          notes="Package: \`ghcr.io/stasian/crossplane-provider-vaultwarden:${GITHUB_REF_NAME}\`"
+          if [ -n "${XPKG_ACCESS_ID}" ]; then
+            notes="${notes}, \`${UPBOUND_REGISTRY_ORG}/crossplane-provider-vaultwarden:${GITHUB_REF_NAME}\`"
+          fi
+          gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes --notes "${notes}"
